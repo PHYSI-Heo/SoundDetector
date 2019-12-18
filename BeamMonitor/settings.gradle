@@ -1,0 +1,2 @@
+include ':app', ':physislibrary'
+rootProject.name='BeamMonitor'
