@@ -1,6 +1,7 @@
 package com.physi.beam.monitor.list;
 
 import android.view.View;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -10,11 +11,15 @@ import com.physi.beam.monitor.R;
 
 public class DeviceHolder extends RecyclerView.ViewHolder {
 
-    TextView tvItem;
+    TextView tvNumber, tvLocation;
+    LinearLayout llDevice;
 
     public DeviceHolder(@NonNull View itemView) {
         super(itemView);
 
-        tvItem = itemView.findViewById(R.id.tv_device_item);
+        tvNumber = itemView.findViewById(R.id.tv_device_number);
+        tvLocation = itemView.findViewById(R.id.tv_device_location);
+
+        llDevice = itemView.findViewById(R.id.ll_device);
     }
 }

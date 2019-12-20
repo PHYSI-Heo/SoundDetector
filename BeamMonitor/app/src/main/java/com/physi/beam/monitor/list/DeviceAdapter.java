@@ -9,6 +9,7 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.physi.beam.monitor.R;
+import com.physi.beam.monitor.data.DeviceData;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -16,45 +17,47 @@ import java.util.List;
 
 public class DeviceAdapter extends RecyclerView.Adapter<DeviceHolder> {
 
-    public interface OnSelectedDeviceListener{
-        void onPosition(int position);
+    public interface OnSelectedListener{
+        void onDevice(int action, DeviceData data);
     }
 
-    private OnSelectedDeviceListener onSelectedDeviceListener;
+    private OnSelectedListener onSelectedListener;
 
-    public void setOnSelectedDeviceListener(OnSelectedDeviceListener listener){
-        onSelectedDeviceListener = listener;
+    public void setOnSelectedListener(OnSelectedListener listener){
+        onSelectedListener = listener;
     }
 
-    private List<String> devices = new LinkedList<>();
-    private int selectedPosition = -1;
+    private List<DeviceData> devices = new LinkedList<>();
 
     @NonNull
     @Override
     public DeviceHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.view_device_number, parent, false);
+        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.view_device_info, parent, false);
         return new DeviceHolder(view);
     }
 
     @Override
     public void onBindViewHolder(@NonNull DeviceHolder holder, final int position) {
-        holder.tvItem.setText(devices.get(position));
-        holder.tvItem.setOnClickListener(new View.OnClickListener() {
+        final DeviceData data = devices.get(position);
+        holder.tvNumber.setText("Serial Number :  " + data.getNumber());
+        holder.tvLocation.setText("Location :  " + data.getLocation());
+
+        holder.llDevice.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(onSelectedDeviceListener != null) {
-                    onSelectedDeviceListener.onPosition(selectedPosition = position);
-                    notifyDataSetChanged();
-                }
+                if(onSelectedListener != null)
+                    onSelectedListener.onDevice(1, data);
             }
         });
 
-        if(selectedPosition == position){
-            holder.tvItem.setBackgroundResource(R.color.colorSelected);
-        }else{
-
-            holder.tvItem.setBackgroundColor(Color.TRANSPARENT);
-        }
+        holder.llDevice.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                if(onSelectedListener != null)
+                    onSelectedListener.onDevice(2, data);
+                return false;
+            }
+        });
     }
 
     @Override
@@ -63,7 +66,7 @@ public class DeviceAdapter extends RecyclerView.Adapter<DeviceHolder> {
     }
 
 
-    public void setItems(List<String> devices){
+    public void setItems(List<DeviceData> devices){
         this.devices = devices;
         notifyDataSetChanged();
     }

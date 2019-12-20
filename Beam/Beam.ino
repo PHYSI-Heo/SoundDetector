@@ -4,7 +4,7 @@ PHYSIs_WiFi physisWiFi;
 
 #define RELAY_2 2
 #define RELAY_3 3
-#define SOUND   4
+#define SOUND   A0
 #define BUZZER  5
 
 
@@ -15,12 +15,18 @@ const String SERIAL_NUMBER = "123412341234";      // PHYSIs KIT 시리얼번호
 const String PUB_TOPIC     = "SoundState";             // Subscribe Topic
 
 
-int soundDetect;
+int decibel;
+int standardDecibel;
+
 long effectTimeout = 10000;
 long effectTime;
 
-long publishTime;
-long publishInterval = 250;
+long initNoiseTime = 0;
+long initNoiseLimit = 60000;
+
+int noiseRange = 500;
+int noiseCount = 0;
+bool isPushMsg = false;
 
 void setup() {
   Serial.begin(9600);
@@ -31,6 +37,10 @@ void setup() {
   pinMode(BUZZER, OUTPUT);
 
   analogWrite(BUZZER, 0);
+
+  standardDecibel = analogRead(SOUND) + noiseRange;
+  Serial.print(F("# Standard Decibel : "));
+  Serial.println(standardDecibel);
 
   physisWiFi.enable();
 
@@ -52,28 +62,40 @@ void setup() {
 }
 
 void loop() {
-  soundDetect = digitalRead(SOUND);;
+  decibel = analogRead(SOUND);
 
-  if (millis() - publishTime > publishInterval) {
-    physisWiFi.startReceiveMsg();
-    publishState();
+  if (initNoiseTime != 0 && millis() - initNoiseTime > initNoiseLimit) {
+    noiseCount = 0;
   }
-  if (soundDetect) {
+
+  if (decibel > standardDecibel) {
+    noiseCount ++;
+    Serial.print(F("# Noise Count : "));
+    Serial.println(noiseCount);
+    if (noiseCount == 1) {
+      initNoiseTime = millis();
+    } else if (noiseCount == 3) {
+      isPushMsg = true;
+      initNoiseTime = noiseCount = 0;
+    }
     digitalWrite(RELAY_2, LOW);
     digitalWrite(RELAY_3, HIGH);
-    publishState();
+    publishNoiseInfo();
     outputBuzzer();
   } else {
     digitalWrite(RELAY_3, LOW);
     digitalWrite(RELAY_2, HIGH);
   }
+
+  physisWiFi.startReceiveMsg();
 }
 
-void publishState() {
-  Serial.print(F("# Sound State : "));
-  Serial.println(soundDetect);
-  physisWiFi.publish(SERIAL_NUMBER, PUB_TOPIC, String(soundDetect));
-  publishTime = millis();
+void publishNoiseInfo() {
+  String msg = String(isPushMsg) + String(decibel);
+  Serial.print(F("# Publish Msg : "));
+  Serial.println(msg);
+  physisWiFi.publish(SERIAL_NUMBER, PUB_TOPIC, msg);
+  isPushMsg = false;
 }
 
 void outputBuzzer() {
