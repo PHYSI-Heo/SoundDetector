@@ -21,12 +21,16 @@ int standardDecibel;
 long effectTimeout = 10000;
 long effectTime;
 
+long beamInterval = 30000;
+long beamTime;
+
 long initNoiseTime = 0;
 long initNoiseLimit = 60000;
 
 int noiseRange = 500;
 int noiseCount = 0;
 bool isPushMsg = false;
+bool isBeam = false;
 
 void setup() {
   Serial.begin(9600);
@@ -83,8 +87,16 @@ void loop() {
     publishNoiseInfo();
     outputBuzzer();
   } else {
-    digitalWrite(RELAY_3, LOW);
-    digitalWrite(RELAY_2, HIGH);
+    if (millis() - beamTime > beamInterval) {
+      beamTime = millis();
+      digitalWrite(RELAY_3, LOW);
+      isBeam = !isBeam;
+      if (isBeam) {
+        digitalWrite(RELAY_2, HIGH);
+      } else {
+        digitalWrite(RELAY_2, LOW);
+      }
+    }
   }
 
   physisWiFi.startReceiveMsg();
