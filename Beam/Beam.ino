@@ -1,18 +1,16 @@
-#include <PHYSIs_Master.h>
+#include <PHYSIs_Master_NC.h>
 
 PHYSIs_WiFi physisWiFi;
 
 #define RELAY_2 2
 #define RELAY_3 3
 #define SOUND   A0
-#define BUZZER  5
-
+#define BUZZER  9
 
 const String WIFI_SSID     = "U+Net4C63";               // WiFi 명
-const String WIFI_PWD      = "6000214821";          // WiFi 비밀번호
-
-const String SERIAL_NUMBER = "123412341234";      // PHYSIs KIT 시리얼번호
-const String PUB_TOPIC     = "SoundState";             // Subscribe Topic
+const String WIFI_PWD      = "6000214821";              // WiFi 비밀번호
+const String SERIAL_NUMBER = "123412341234";            // PHYSIs KIT 시리얼번호
+const String PUB_TOPIC     = "SoundState";              // Subscribe Topic
 
 
 int decibel;
@@ -20,10 +18,8 @@ int standardDecibel;
 
 long effectTimeout = 10000;
 long effectTime;
-
-long beamInterval = 30000;
+long beamInterval = 10000;
 long beamTime;
-
 long initNoiseTime = 0;
 long initNoiseLimit = 60000;
 
@@ -35,19 +31,20 @@ bool isBeam = false;
 void setup() {
   Serial.begin(9600);
 
+  // Pin Setup
   pinMode(RELAY_2, OUTPUT);
   pinMode(RELAY_3, OUTPUT);
   pinMode(SOUND, INPUT);
   pinMode(BUZZER, OUTPUT);
-
   analogWrite(BUZZER, 0);
 
+  // Setup Standard Decible
   standardDecibel = analogRead(SOUND) + noiseRange;
   Serial.print(F("# Standard Decibel : "));
   Serial.println(standardDecibel);
 
+  // Setup WiFi & Mqtt
   physisWiFi.enable();
-
   physisWiFi.connectWiFi(WIFI_SSID, WIFI_PWD);
   Serial.print("# WiFi Connecting..");
   delay(1000);
@@ -56,7 +53,6 @@ void setup() {
     delay(1000);
   }
   Serial.println(F("Connected..."));
-
   Serial.print("# MQTT Connecting..");
   if (physisWiFi.connectMQTT()) {                  // PHYSIs 플랫폼의 MQTT Broker와 연결
     Serial.println("Success...");
@@ -66,8 +62,10 @@ void setup() {
 }
 
 void loop() {
+  // Read Sound Decibel
   decibel = analogRead(SOUND);
 
+  // Initialization Noise Count
   if (initNoiseTime != 0 && millis() - initNoiseTime > initNoiseLimit) {
     noiseCount = 0;
   }
@@ -87,9 +85,10 @@ void loop() {
     publishNoiseInfo();
     outputBuzzer();
   } else {
+    // Blink Beam (Scheduler)
+    digitalWrite(RELAY_3, LOW);
     if (millis() - beamTime > beamInterval) {
       beamTime = millis();
-      digitalWrite(RELAY_3, LOW);
       isBeam = !isBeam;
       if (isBeam) {
         digitalWrite(RELAY_2, HIGH);
@@ -99,8 +98,10 @@ void loop() {
     }
   }
 
+  // Mqtt Ping
   physisWiFi.startReceiveMsg();
 }
+
 
 void publishNoiseInfo() {
   String msg = String(isPushMsg) + String(decibel);
@@ -109,6 +110,7 @@ void publishNoiseInfo() {
   physisWiFi.publish(SERIAL_NUMBER, PUB_TOPIC, msg);
   isPushMsg = false;
 }
+
 
 void outputBuzzer() {
   effectTime = millis();
